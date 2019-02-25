@@ -37,9 +37,12 @@ class Client(object):
                 print("Please, enter 'yes' or 'no'")
 
     def _save_data(self, host, login, password):
+        const_dir_name = os.getcwd()
         for dir_name in self._auth_path.split('/')[:-1]:
             if not os.path.exists(dir_name):
-                os.mkdir(dir_name) # обработай случай правильных проверок
+                os.mkdir(dir_name)
+            os.chdir(dir_name)
+        os.chdir(const_dir_name)
 
         with open(self._auth_path, "wb") as file:
             dump((host, login, password), file)
@@ -55,9 +58,13 @@ class Client(object):
             self._host = input("Enter host name: ")
             try:
                 self._client = IMAP4_SSL(host=self._host, port=self._port)
-            except gaierror:
-                print(f"Socket error")
+            except gaierror as err:
+                print(err)
                 self._host = None
+            except TimeoutError as err:
+                print(err)
+                print("Effort of reconnection")
+                self._connect(hostname)
             else:
                 break
         else:
@@ -72,8 +79,12 @@ class Client(object):
                 print("Please, enter data in right format, i.e. 'petya_pupkin@mail.com qwerty123'")
                 mail = None
                 password = None
-            except IMAP4.error:
-                print("Wrong data")
+            except IMAP4.error as err:
+                print(err)
+                if str(err).find("WinError") == -1:
+                    answer = input("Do you want to use this login and password for connection?")
+                    if answer == "yes":
+                        self._login(mail, password)
                 mail = None
                 password = None
             else:
