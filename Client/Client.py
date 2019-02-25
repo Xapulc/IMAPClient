@@ -1,8 +1,8 @@
 from imaplib import IMAP4, IMAP4_SSL
 from socket import gaierror
 from email import message_from_bytes
-from pickle import dump, load
-import os
+
+from Client.Authentication import Authentication
 
 
 class Client(object):
@@ -10,47 +10,15 @@ class Client(object):
         self._client: IMAP4_SSL = None
         self._host: str = None
         self._port: int = 993
-        self._auth_path = "res/auth_data"
+        self._auth = Authentication("res/auth_data")
 
-        if not self._use_old_data(): # обработай случай, когда я хочу юзать старые данные, но они уже не действительны
+        if not self._auth.use_old_data(): # обработай случай, когда я хочу юзать старые данные, но они уже не действительны
             self._connect()
             self._login()
         else:
-            host, login, password = self._load_data()
+            host, login, password = self._auth.load_data()
             self._connect(host)
             self._login(login, password)
-
-    def _use_old_data(self):
-        try:
-            with open(self._auth_path, "rb") as _:
-                pass
-        except FileNotFoundError:
-            return False
-
-        while True:
-            answer = input("Do you want to use old data?")
-            if answer == "yes":
-                return True
-            elif answer == "no":
-                return False
-            else:
-                print("Please, enter 'yes' or 'no'")
-
-    def _save_data(self, host, login, password):
-        const_dir_name = os.getcwd()
-        for dir_name in self._auth_path.split('/')[:-1]:
-            if not os.path.exists(dir_name):
-                os.mkdir(dir_name)
-            os.chdir(dir_name)
-        os.chdir(const_dir_name)
-
-        with open(self._auth_path, "wb") as file:
-            dump((host, login, password), file)
-
-    def _load_data(self):
-        with open(self._auth_path, "rb") as file:
-            data = load(file)
-        return data
 
     def _connect(self, hostname=None):
         self._host = hostname
@@ -92,7 +60,7 @@ class Client(object):
         else:
             self._client.login(user=mail, password=password)
 
-        self._save_data(self._host, mail, password)
+        self._auth.save_data(self._host, mail, password)
 
     def request(self):
         while True:

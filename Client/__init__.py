@@ -1,1 +1,1 @@
-__all__ = ["Client"]
+__all__ = ["Client", "Authentication"]
