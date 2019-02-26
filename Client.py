@@ -1,4 +1,4 @@
-from Client.Client import Client
+from сlient.Client import Client
 
 
 if __name__ == "__main__":

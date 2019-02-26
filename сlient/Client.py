@@ -2,7 +2,8 @@ from imaplib import IMAP4, IMAP4_SSL
 from socket import gaierror
 from email import message_from_bytes
 
-from Client.Authentication import Authentication
+from сlient.Authentication import Authentication
+from сlient.file_worker import create_dir
 
 
 class Client(object):
@@ -73,6 +74,18 @@ class Client(object):
                 return False
             else:
                 self._help()
+                # бывает imaplib.abort
+
+    def _check_dir(self, dirname):
+        dir_list = dirname.split('/')
+        if len(dir_list) != 3:
+            return False
+
+        group, theme, person = dir_list
+        if not group.isdigit():
+            return False
+
+        return True
 
     def get_all_files(self):
         status, msgs = self._client.select("INBOX", True)
@@ -91,11 +104,17 @@ class Client(object):
             mail = message_from_bytes(message[0][1])
 
             if mail.is_multipart():
+                dirname = '/'.join(mail["Subject"].split(' ')[1:])
+                if not self._check_dir(dirname):
+                    continue
+                dirname = "res/" + dirname
+                create_dir(dirname)
+
                 for part in mail.walk():
                     content_type = part.get_content_type()
                     filename = part.get_filename()
                     if filename:
-                        with open(f"{filename}", 'wb') as new_file: # нормально сохрани файлы
+                        with open(f"{dirname}/{filename}", 'wb') as new_file:
                             new_file.write(part.get_payload(decode=True))
 
     def close(self):

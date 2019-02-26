@@ -1,9 +1,10 @@
 from pickle import dump, load
-import os
+
+from сlient.file_worker import create_dir
 
 
 class Authentication(object):
-    def __init__(self, path):
+    def __init__(self, path: str):
         self._auth_path = path
 
     def use_old_data(self):
@@ -23,12 +24,9 @@ class Authentication(object):
                 print("Please, enter 'yes' or 'no'")
 
     def save_data(self, host, login, password):
-        const_dir_name = os.getcwd()
-        for dir_name in self._auth_path.split('/')[:-1]:
-            if not os.path.exists(dir_name):
-                os.mkdir(dir_name)
-            os.chdir(dir_name)
-        os.chdir(const_dir_name)
+        ind_of_last_slash = self._auth_path.rfind('/')
+        if ind_of_last_slash != -1:
+            create_dir(self._auth_path[:ind_of_last_slash])
 
         with open(self._auth_path, "wb") as file:
             dump((host, login, password), file)
