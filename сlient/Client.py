@@ -74,7 +74,6 @@ class Client(object):
                 return False
             else:
                 self._help()
-                # бывает imaplib.abort
 
     def _check_dir(self, dirname):
         dir_list = dirname.split('/')
@@ -88,34 +87,41 @@ class Client(object):
         return True
 
     def get_all_files(self):
-        status, msgs = self._client.select("INBOX", True)
-        if status != "OK":
-            return
+        try:
+            box = "INBOX"
+            status, msgs = self._client.select(box, True)
+            assert status == "OK", f"Can't select {box}"
 
-        status, num_messages = self._client.search("utf-8", "SUBJECT", "group")
-        if status != "OK":
-            return
+            key_word = "group"
+            status, num_messages = self._client.search("utf-8", "SUBJECT", key_word)
+            assert status == "OK", f"Can't search {key_word}"
 
-        for num in num_messages[0].split():
-            status, message = self._client.fetch(num, "(RFC822)")
-            if status != "OK":
-                continue
-
-            mail = message_from_bytes(message[0][1])
-
-            if mail.is_multipart():
-                dirname = '/'.join(mail["Subject"].split(' ')[1:])
-                if not self._check_dir(dirname):
+            for num in num_messages[0].split():
+                status, message = self._client.fetch(num, "(RFC822)")
+                if status != "OK":
                     continue
-                dirname = "res/" + dirname
-                create_dir(dirname)
 
-                for part in mail.walk():
-                    content_type = part.get_content_type()
-                    filename = part.get_filename()
-                    if filename:
-                        with open(f"{dirname}/{filename}", 'wb') as new_file:
-                            new_file.write(part.get_payload(decode=True))
+                mail = message_from_bytes(message[0][1])
+
+                if mail.is_multipart():
+                    dirname = '/'.join(mail["Subject"].split(' ')[1:])
+                    if not self._check_dir(dirname):
+                        continue
+                    dirname = "res/" + dirname
+                    create_dir(dirname)
+
+                    for part in mail.walk():
+                        content_type = part.get_content_type()
+                        filename = part.get_filename()
+                        if filename:
+                            with open(f"{dirname}/{filename}", 'wb') as new_file:
+                                new_file.write(part.get_payload(decode=True))
+        except self._client.abort as err:
+            print(err)
+            return
+        except AssertionError as err:
+            print(err)
+            return
 
     def close(self):
         if self._client is not None:
