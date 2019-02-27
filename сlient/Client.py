@@ -13,10 +13,12 @@ class Client(object):
         self._port: int = 993
         self._auth = Authentication("res/auth_data")
 
-        if not self._auth.use_old_data(): # обработай случай, когда я хочу юзать старые данные, но они уже не действительны
+        is_new_auth_session = True
+        if not self._auth.use_old_data():
             self._connect()
-            self._login()
-        else:
+            is_new_auth_session = not self._login()
+
+        if is_new_auth_session:
             host, login, password = self._auth.load_data()
             self._connect(host)
             self._login(login, password)
@@ -59,9 +61,14 @@ class Client(object):
             else:
                 break
         else:
-            self._client.login(user=mail, password=password)
+            try:
+                self._client.login(user=mail, password=password)
+            except IMAP4.error as err:
+                print("You have some probles with you authentication data")
+                return False
 
         self._auth.save_data(self._host, mail, password)
+        return True
 
     def request(self):
         while True:
