@@ -2,12 +2,14 @@ from imaplib import IMAP4, IMAP4_SSL
 from socket import gaierror
 from email import message_from_bytes
 
-from сlient.Authentication import Authentication
-from сlient.file_worker import create_dir
+from client.Authentication import Authentication
+from client.Compiler import Compiler
+from client.file_worker import create_dir, goto, back
 
 
 class Client(object):
     def __init__(self):
+        self._compiler = Compiler()
         self._client: IMAP4_SSL = None
         self._host: str = None
         self._port: int = 993
@@ -75,7 +77,10 @@ class Client(object):
             req_str = input("Enter your request: ")
             req: list = req_str.split()
             if len(req) >= 2 and req[0] == "get" and req[1] == "all":
-                self.get_all_files()
+                self._get_all_files()
+                return True
+            elif len(req) >= 1 and req[0] == "compile":
+                self._compile()
                 return True
             elif len(req) >= 1 and req[0] == "exit":
                 return False
@@ -93,7 +98,7 @@ class Client(object):
 
         return True
 
-    def get_all_files(self):
+    def _get_all_files(self):
         try:
             box = "INBOX"
             status, msgs = self._client.select(box, True)
@@ -129,6 +134,12 @@ class Client(object):
         except AssertionError as err:
             print(err)
             return
+
+    def _compile(self):
+        create_dir("res")
+        goto("res")
+        self._compiler.compile_all()
+        back()
 
     def close(self):
         if self._client is not None:

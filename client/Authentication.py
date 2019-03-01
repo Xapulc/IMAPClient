@@ -1,6 +1,6 @@
 from pickle import dump, load
 
-from сlient.file_worker import create_dir
+from client.file_worker import create_dir
 
 
 class Authentication(object):
