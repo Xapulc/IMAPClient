@@ -10,17 +10,17 @@ def create_dir(dir_path: str):
     os.chdir(const_dir_name)
 
 
-def get_files():
-    return os.walk('.')[2]
+def get_files(dir_name: str = '.'):
+    return list(os.walk(dir_name))[0][2]
 
 
 def get_dirs():
-    return os.walk('.')[1]
+    return list(os.walk('.'))[0][1]
 
 
 def goto(dir_name: str):
-    os.system(f"cd {dir_name}")
+    os.chdir(dir_name)
 
 
 def back():
-    os.system("..")
+    os.chdir("..")

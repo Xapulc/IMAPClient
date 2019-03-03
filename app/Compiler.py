@@ -1,6 +1,6 @@
 import os
 
-from client.file_worker import get_files, get_dirs, goto, back
+from app.file_worker import get_files, get_dirs, goto, back
 
 
 class Compiler(object):
@@ -9,12 +9,12 @@ class Compiler(object):
         self._cpp_types = {'.cc', '.cpp', '.cxx', '.c++'}
 
     def compile_all(self):
-        data = os.walk('.')
+        if "Makefile" in get_files():
+            self._make()
+            return
+
         for file_name in get_files():
-            if file_name == "Makefile":
-                self._make()
-                return
-            elif file_name[file_name.rfind('.'):] in self._c_types:
+            if file_name[file_name.rfind('.'):] in self._c_types:
                 self._compile_c(file_name)
             elif file_name[file_name.rfind('.'):] in self._cpp_types:
                 self._compile_cpp(file_name)

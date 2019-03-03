@@ -2,9 +2,9 @@ from imaplib import IMAP4, IMAP4_SSL
 from socket import gaierror
 from email import message_from_bytes
 
-from client.Authentication import Authentication
-from client.Compiler import Compiler
-from client.file_worker import create_dir, goto, back
+from app.Authentication import Authentication
+from app.Compiler import Compiler
+from app.file_worker import create_dir, goto, back
 
 
 class Client(object):
@@ -13,17 +13,18 @@ class Client(object):
         self._client: IMAP4_SSL = None
         self._host: str = None
         self._port: int = 993
-        self._auth = Authentication("res/auth_data")
+        self._compile_res = "res"
+        self._auth = Authentication(f"{self._compile_res}/auth_data")
 
         is_new_auth_session = True
-        if not self._auth.use_old_data():
-            self._connect()
-            is_new_auth_session = not self._login()
-
-        if is_new_auth_session:
+        if self._auth.use_old_data():
             host, login, password = self._auth.load_data()
             self._connect(host)
-            self._login(login, password)
+            is_new_auth_session = not self._login(login, password)
+
+        if is_new_auth_session:
+            self._connect()
+            self._login()
 
     def _connect(self, hostname=None):
         self._host = hostname
@@ -65,7 +66,7 @@ class Client(object):
         else:
             try:
                 self._client.login(user=mail, password=password)
-            except IMAP4.error as err:
+            except IMAP4.error:
                 print("You have some probles with you authentication data")
                 return False
 
@@ -119,11 +120,10 @@ class Client(object):
                     dirname = '/'.join(mail["Subject"].split(' ')[1:])
                     if not self._check_dir(dirname):
                         continue
-                    dirname = "res/" + dirname
+                    dirname = f"{self._compile_res}/" + dirname
                     create_dir(dirname)
 
                     for part in mail.walk():
-                        content_type = part.get_content_type()
                         filename = part.get_filename()
                         if filename:
                             with open(f"{dirname}/{filename}", 'wb') as new_file:
@@ -136,8 +136,8 @@ class Client(object):
             return
 
     def _compile(self):
-        create_dir("res")
-        goto("res")
+        create_dir(self._compile_res)
+        goto(self._compile_res)
         self._compiler.compile_all()
         back()
 
@@ -149,5 +149,6 @@ class Client(object):
         print(f'''****************
         You can use following methods:
         get all: get all files in mails, which consist 'group' in theme
+        compile: compile all files in {self._compile_res}
         exit: exit client
 ****************''')
