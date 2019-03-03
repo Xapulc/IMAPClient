@@ -4,11 +4,17 @@ from app.file_worker import get_files, get_dirs, goto, back
 
 
 class Compiler(object):
+    """
+    Class is need for compilation C and C++
+    """
     def __init__(self):
         self._c_types = {'.c'}
         self._cpp_types = {'.cc', '.cpp', '.cxx', '.c++'}
 
     def compile_all(self):
+        """
+        Recursively compile all files in current directory and its subdirectories
+        """
         if "Makefile" in get_files():
             self._make()
             return
@@ -25,10 +31,19 @@ class Compiler(object):
             back()
 
     def _compile_cpp(self, file_name: str):
+        """
+        Compile C++ file
+        """
         os.system(f"g++ {file_name}")
 
     def _compile_c(self, file_name: str):
+        """
+        Compile C file
+        """
         os.system(f"gcc {file_name}")
 
     def _make(self):
+        """
+        Build project in current directory
+        """
         os.system("make")
