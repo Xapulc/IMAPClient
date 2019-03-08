@@ -8,7 +8,11 @@ from app.file_worker import create_dir, goto, back
 
 
 class Client(object):
+
     def __init__(self):
+        """
+        Create an instance client and connect to host if use old data is true
+        """
         self._compiler = Compiler()
         self._client: IMAP4_SSL = None
         self._host: str = None
@@ -27,12 +31,15 @@ class Client(object):
             self._login()
 
     def _connect(self, hostname=None):
+        """
+        Connect to host
+        """
         self._host = hostname
         while self._host is None:
             self._host = input("Enter host name: ")
             try:
                 self._client = IMAP4_SSL(host=self._host, port=self._port)
-            except gaierror as err:
+            except gaierror as err:  # Unavailable host
                 print(err)
                 self._host = None
             except TimeoutError as err:
@@ -45,6 +52,9 @@ class Client(object):
             self._client = IMAP4_SSL(host=self._host, port=self._port)
 
     def _login(self, mail=None, password=None):
+        """
+        Login into host
+        """
         while mail is None and password is None:
             try:
                 mail, password = input("Enter your mail and password: ").split(' ')
@@ -74,11 +84,14 @@ class Client(object):
         return True
 
     def request(self):
+        """
+        Send request to host
+        """
         while True:
             req_str = input("Enter your request: ")
             req: list = req_str.split()
             if len(req) >= 2 and req[0] == "get" and req[1] == "all":
-                self._get_all_files()
+                self._load_attachments()
                 return True
             elif len(req) >= 1 and req[0] == "compile":
                 self._compile()
@@ -89,6 +102,9 @@ class Client(object):
                 self._help()
 
     def _check_dir(self, dirname):
+        """
+        Checking correctness theme of mail
+        """
         dir_list = dirname.split('/')
         if len(dir_list) != 3:
             return False
@@ -99,7 +115,10 @@ class Client(object):
 
         return True
 
-    def _get_all_files(self):
+    def _load_attachments(self):
+        """
+        Load attachments from mails in mailbox in directories
+        """
         try:
             box = "INBOX"
             status, msgs = self._client.select(box, True)
@@ -136,12 +155,18 @@ class Client(object):
             return
 
     def _compile(self):
+        """
+        Compile files
+        """
         create_dir(self._compile_res)
         goto(self._compile_res)
         self._compiler.compile_all()
         back()
 
     def close(self):
+        """
+        Close connection
+        """
         if self._client is not None:
             self._client.logout()
 
