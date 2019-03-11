@@ -91,7 +91,10 @@ class Client(object):
             req_str = input("Enter your request: ")
             req: list = req_str.split()
             if len(req) >= 2 and req[0] == "get" and req[1] == "all":
-                self._load_attachments()
+                if len(req) >=3 and req[2] == "unseen":
+                    self._load_attachments(unseen=True)
+                else:
+                    self._load_attachments(unseen=False)
                 return True
             elif len(req) >= 1 and req[0] == "compile":
                 self._compile()
@@ -101,7 +104,7 @@ class Client(object):
             else:
                 self._help()
 
-    def _check_dir(self, dirname):
+    def _check_dir(self, dirname: str):
         """
         Checking correctness theme of mail
         """
@@ -115,9 +118,11 @@ class Client(object):
 
         return True
 
-    def _load_attachments(self):
+    def _load_attachments(self, unseen: bool):
         """
         Load attachments from mails in mailbox in directories
+        :param unseen: if True, load attachments from unseen mails,
+        else load attachments from all files (which satisfy _check_dir)
         """
         try:
             box = "INBOX"
@@ -125,13 +130,17 @@ class Client(object):
             assert status == "OK", f"Can't select {box}"
 
             key_word = "group"
-            status, num_messages = self._client.search("utf-8", "SUBJECT", key_word)
+            if unseen:
+                status, num_messages = self._client.search("utf-8", "INBOX", "(UNSEEN)", "SUBJECT", key_word)
+            else:
+                status, num_messages = self._client.search("utf-8", "SUBJECT", key_word)
             assert status == "OK", f"Can't search {key_word}"
 
             for num in num_messages[0].split():
                 status, message = self._client.fetch(num, "(RFC822)")
                 if status != "OK":
                     continue
+                self._client.store(num, "+FLAGS", "\Seen")
 
                 mail = message_from_bytes(message[0][1])
 
