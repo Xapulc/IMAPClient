@@ -172,6 +172,9 @@ class Client(object):
         self._compiler.compile_all()
         back()
 
+    def _get_stats(self):
+
+
     def close(self):
         """
         Close connection
@@ -183,6 +186,7 @@ class Client(object):
         print(f'''****************
         You can use following methods:
         get all: get all files in mails, which consist 'group' in theme
+        get all unseen: same 'get all', but get only unseen emails
         compile: compile all files in {self._compile_res}
         exit: exit client
 ****************''')
