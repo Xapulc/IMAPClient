@@ -172,9 +172,6 @@ class Client(object):
         self._compiler.compile_all()
         back()
 
-    def _get_stats(self):
-
-
     def close(self):
         """
         Close connection
