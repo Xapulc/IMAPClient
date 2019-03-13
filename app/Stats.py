@@ -5,7 +5,7 @@ class Stats(object):
     def __init__(self):
         self._logs = {}
 
-    def __add__(self, group: str, human: str, theme: str, compile_log: Log):
+    def add(self, group: str, human: str, theme: str, compile_log: Log):
         if group not in self._logs.keys():
             self._logs[human] = {group: {theme: {compile_log}}}
         else:

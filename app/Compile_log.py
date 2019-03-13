@@ -11,6 +11,9 @@ class Log(object):
     def is_success(self):
         return self._success
 
+    def get_name(self):
+        return self._object
+
     def __str__(self):
         return f'''Object:
 {self._object}

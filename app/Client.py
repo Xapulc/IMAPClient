@@ -4,6 +4,7 @@ from email import message_from_bytes
 
 from app.Authentication import Authentication
 from app.Compiler import Compiler
+from app.Stats import Stats
 from app.file_worker import create_dir, goto, back
 
 
@@ -91,7 +92,7 @@ class Client(object):
             req_str = input("Enter your request: ")
             req: list = req_str.split()
             if len(req) >= 2 and req[0] == "get" and req[1] == "all":
-                if len(req) >=3 and req[2] == "unseen":
+                if len(req) >= 3 and req[2] == "unseen":
                     self._load_attachments(unseen=True)
                 else:
                     self._load_attachments(unseen=False)
@@ -118,12 +119,14 @@ class Client(object):
 
         return True
 
-    def _load_attachments(self, unseen: bool):
+    def _load_attachments(self, unseen: bool, with_stats: bool = False):
         """
         Load attachments from mails in mailbox in directories
         :param unseen: if True, load attachments from unseen mails,
         else load attachments from all files (which satisfy _check_dir)
         """
+        if with_stats:
+            stats = Stats()
         try:
             box = "INBOX"
             status, msgs = self._client.select(box, True)
@@ -140,8 +143,8 @@ class Client(object):
                 status, message = self._client.fetch(num, "(RFC822)")
                 if status != "OK":
                     continue
-                self._client.store(num, "+FLAGS", "\Seen")
 
+                self._client.store(num, "+FLAGS", "\Seen")
                 mail = message_from_bytes(message[0][1])
 
                 if mail.is_multipart():
@@ -156,6 +159,24 @@ class Client(object):
                         if filename:
                             with open(f"{dirname}/{filename}", 'wb') as new_file:
                                 new_file.write(part.get_payload(decode=True))
+
+                    if with_stats:
+                        logs = self._compiler.compile_direct(dirname)
+                        for log in logs:
+                            log_name = log.get_name()
+                            grp_ind = log_name.find(f"{self._compile_res}/") + len(f"{self._compile_res}/") + 1
+                            hum_ind = log_name[grp_ind:].find('/') + 1
+                            theme_ind = log_name[hum_ind:].find('/') + 1
+                            files_ind = log_name[theme_ind:].find('/') + 1
+
+                            group = log_name[grp_ind, hum_ind-1]
+                            human = log_name[hum_ind, theme_ind-1]
+                            theme = log_name[theme_ind, files_ind-1]
+                            stats.add(group, human, theme, log)
+
+            if with_stats:
+                with open("log_table.txt") as log_file:
+                    log_file.write(stats.get_table())
         except self._client.abort as err:
             print(err)
             return
@@ -163,13 +184,13 @@ class Client(object):
             print(err)
             return
 
-    def _compile(self):
+    def _compile(self, files=None):
         """
         Compile files
         """
         create_dir(self._compile_res)
         goto(self._compile_res)
-        self._compiler.compile_all()
+        self._compiler.compile_all('.', files)
         back()
 
     def close(self):
