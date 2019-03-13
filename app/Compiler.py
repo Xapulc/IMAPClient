@@ -1,6 +1,6 @@
-import os
-from subprocess import run, PIPE
+from subprocess import run, PIPE, CompletedProcess
 
+from app.Compile_log import Log
 from app.file_worker import get_files, get_dirs, goto, back
 
 
@@ -8,23 +8,27 @@ class Compiler(object):
     """
     Class is need for compilation C and C++
     """
-    def __init__(self):
+    def __init__(self, path):
+        self._path = path
         self._c_types = {'.c'}
         self._cpp_types = {'.cc', '.cpp', '.cxx', '.c++'}
+
+    def get_log(self, name: str, complProc: CompletedProcess):
+        return Log(name, complProc.stderr, True if complProc.returncode == 0 else False)
 
     def compile_all(self):
         """
         Recursively compile all files in current directory and its subdirectories
         """
+        logs = []
         if "Makefile" in get_files():
-            self._make()
-            return
-
-        for file_name in get_files():
-            if file_name[file_name.rfind('.'):] in self._c_types:
-                self._compile_c(file_name)
-            elif file_name[file_name.rfind('.'):] in self._cpp_types:
-                self._compile_cpp(file_name)
+            logs.append(self.get_log(path, self._make()))
+        else:
+            for file_name in get_files():
+                if file_name[file_name.rfind('.'):] in self._c_types:
+                    complProc = self._compile_c(file_name)
+                elif file_name[file_name.rfind('.'):] in self._cpp_types:
+                    complProc = self._compile_cpp(file_name)
 
         for dir_name in get_dirs():
             goto(dir_name)
