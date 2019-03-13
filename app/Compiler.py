@@ -1,4 +1,5 @@
 import os
+from subprocess import run, PIPE
 
 from app.file_worker import get_files, get_dirs, goto, back
 
@@ -34,16 +35,16 @@ class Compiler(object):
         """
         Compile C++ file
         """
-        os.system(f"g++ {file_name}")
+        return run(["g++", file_name], stdout=PIPE, stderr=PIPE, encoding='utf-8')
 
     def _compile_c(self, file_name: str):
         """
         Compile C file
         """
-        os.system(f"gcc {file_name}")
+        return run(["gcc", file_name], stdout=PIPE, stderr=PIPE, encoding='utf-8')
 
     def _make(self):
         """
         Build project in current directory
         """
-        os.system("make")
+        return run(["make"], stdout=PIPE, stderr=PIPE, encoding='utf-8')
