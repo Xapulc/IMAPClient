@@ -5,23 +5,27 @@ class Stats(object):
     def __init__(self):
         self._logs = {}
 
-    def __add__(self, human: str, theme: str, compile_log: Log):
-        if human not in self._logs.keys():
-            self._logs[human] = {theme: {compile_log}}
+    def __add__(self, group: str, human: str, theme: str, compile_log: Log):
+        if group not in self._logs.keys():
+            self._logs[human] = {group: {theme: {compile_log}}}
         else:
-            if theme not in self._logs[human]:
-                self._logs[human][theme] = {compile_log}
+            if human not in self._logs[group].keys():
+                self._logs[group][human] = {theme: {compile_log}}
             else:
-                self._logs[human][theme].add(compile_log)
+                if theme not in self._logs[human]:
+                    self._logs[group][human][theme] = {compile_log}
+                else:
+                    self._logs[group][human][theme].add(compile_log)
 
     def get_total_num(self, only_ok=False):
         total_num = 0
-        for human in self._logs.keys():
-            for theme in self._logs[human].keys():
-                if only_ok:
-                    total_num += sum(map(lambda log: log.is_success(), self._logs[human][theme]))
-                else:
-                    total_num += len(self._logs[human][theme])
+        for group in self._logs.keys():
+            for human in self._logs[group].keys():
+                for theme in self._logs[group][human].keys():
+                    if only_ok:
+                        total_num += sum(map(lambda log: log.is_success(), self._logs[group][human][theme]))
+                    else:
+                        total_num += len(self._logs[group][human][theme])
         return total_num
 
     def get_table(self):
@@ -37,9 +41,9 @@ class Stats(object):
             lines = [cell.split('\n') for cell in cells]
             max_lines = max(len(cell) for cell in cells)
 
-            one_line = (3 * (cell_len+1) + 1) * '-' + '\n'
+            line = (4 * (cell_len+1) + 1) * '-' + '\n'
             emply_line = cell_len * ' '
-            cell_row = one_line
+            cell_row = line
 
             for i in range(max_lines):
                 cell_row += '|'
@@ -49,20 +53,22 @@ class Stats(object):
                     else:
                         cell_row += cell[i] + (cell_len - len(cell[i])) * ' '
                     cell_row += '|'
-                cell_row += '\n'
+                cell_row += line + '\n'
             return cell_row
 
         cell_len = 20
-        one_line = (3 * (cell_len+1) + 1)*'-' + '\n'
+        one_line = (4 * (cell_len+1) + 1)*'-' + '\n'
         table = one_line
 
-        for human in self._logs.keys():
-            human_cell = get_cell(human, cell_len)
-            for theme in self._logs[human].keys():
-                theme_cell = get_cell(theme, cell_len)
-                for log in self._logs[human][theme]:
-                    log_cell = get_cell(log, cell_len)
-                    table += concatect_cells([human_cell, theme_cell, log_cell], cell_len) + one_line
+        for group in self._logs.keys():
+            group_cell = get_cell(group, cell_len)
+            for human in self._logs[group].keys():
+                human_cell = get_cell(human, cell_len)
+                for theme in self._logs[group][human].keys():
+                    theme_cell = get_cell(theme, cell_len)
+                    for log in self._logs[group][human][theme]:
+                        log_cell = get_cell(log, cell_len)
+                        table += concatect_cells([group_cell, human_cell, theme_cell, log_cell], cell_len) + one_line
         return table
 
     def __str__(self):
