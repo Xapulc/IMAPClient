@@ -33,11 +33,27 @@ class Stats(object):
                     cell_len += '\n'
             return cell
 
-        def concatect_cells(cells):
+        def concatect_cells(cells, cell_len):
+            lines = [cell.split('\n') for cell in cells]
+            max_lines = max(len(cell) for cell in cells)
 
+            one_line = (3 * (cell_len+1) + 1) * '-' + '\n'
+            emply_line = cell_len * ' '
+            cell_row = one_line
+
+            for i in range(max_lines):
+                cell_row += '|'
+                for cell in lines:
+                    if len(cell) <= i:
+                        cell_row += emply_line
+                    else:
+                        cell_row += cell[i] + (cell_len - len(cell[i])) * ' '
+                    cell_row += '|'
+                cell_row += '\n'
+            return cell_row
 
         cell_len = 20
-        one_line = cell_len*'-' + '\n'
+        one_line = (3 * (cell_len+1) + 1)*'-' + '\n'
         table = one_line
 
         for human in self._logs.keys():
@@ -46,7 +62,7 @@ class Stats(object):
                 theme_cell = get_cell(theme, cell_len)
                 for log in self._logs[human][theme]:
                     log_cell = get_cell(log, cell_len)
-                    table += concatect_cells([human_cell, theme_cell, log_cell]) + one_line
+                    table += concatect_cells([human_cell, theme_cell, log_cell], cell_len) + one_line
         return table
 
     def __str__(self):
