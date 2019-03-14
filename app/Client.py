@@ -95,7 +95,7 @@ class Client(object):
                 if len(req) >= 3 and req[2] == "unseen":
                     self._load_attachments(unseen=True)
                 else:
-                    self._load_attachments(unseen=False)
+                    self._load_attachments()
                 return True
             elif len(req) >= 1 and req[0] == "compile":
                 self._compile()
@@ -119,14 +119,13 @@ class Client(object):
 
         return True
 
-    def _load_attachments(self, unseen: bool, with_stats: bool = False):
+    def _load_attachments(self, unseen: bool = False):
         """
         Load attachments from mails in mailbox in directories
         :param unseen: if True, load attachments from unseen mails,
         else load attachments from all files (which satisfy _check_dir)
         """
-        if with_stats:
-            stats = Stats()
+        stats = Stats()
         try:
             box = "INBOX"
             status, msgs = self._client.select(box, True)
@@ -144,7 +143,7 @@ class Client(object):
                 if status != "OK":
                     continue
 
-                self._client.store(num, "+FLAGS", "\Seen")
+                # self._client.store(num, "+FLAGS", "\Seen")
                 mail = message_from_bytes(message[0][1])
 
                 if mail.is_multipart():
@@ -160,23 +159,19 @@ class Client(object):
                             with open(f"{dirname}/{filename}", 'wb') as new_file:
                                 new_file.write(part.get_payload(decode=True))
 
-                    if with_stats:
-                        logs = self._compiler.compile_direct(dirname)
-                        for log in logs:
-                            log_name = log.get_name()
-                            grp_ind = log_name.find(f"{self._compile_res}/") + len(f"{self._compile_res}/") + 1
-                            hum_ind = log_name[grp_ind:].find('/') + 1
-                            theme_ind = log_name[hum_ind:].find('/') + 1
-                            files_ind = log_name[theme_ind:].find('/') + 1
+                    logs = self._compiler.compile_direct(dirname)
+                    for log in logs:
+                        log_name = log.get_name()
 
-                            group = log_name[grp_ind, hum_ind-1]
-                            human = log_name[hum_ind, theme_ind-1]
-                            theme = log_name[theme_ind, files_ind-1]
-                            stats.add(group, human, theme, log)
+                        lst = log_name.split('/')
+                        print(lst)
+                        group = lst[1]
+                        human = lst[3]
+                        theme = lst[2]
+                        stats.add(group, human, theme, log)
 
-            if with_stats:
-                with open("log_table.txt") as log_file:
-                    log_file.write(stats.get_table())
+            with open("log_table.txt", 'w') as log_file:
+                log_file.write(str(stats))
         except self._client.abort as err:
             print(err)
             return
