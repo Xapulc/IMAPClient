@@ -164,7 +164,6 @@ class Client(object):
                         log_name = log.get_name()
 
                         lst = log_name.split('/')
-                        print(lst)
                         group = lst[1]
                         human = lst[3]
                         theme = lst[2]
