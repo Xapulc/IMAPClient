@@ -1,3 +1,4 @@
+import datetime
 from imaplib import IMAP4, IMAP4_SSL
 from socket import gaierror
 from email import message_from_bytes
@@ -88,12 +89,44 @@ class Client(object):
         """
         Send request to host
         """
+        def transform_to_date(date_str: str):
+            try:
+                lst = date_str.split(':')
+                res_date = datetime.date(int(lst[2]), int(lst[1]), int(lst[0]))
+                return res_date
+            except ValueError:
+                return None
+            except TypeError:
+                return None
+            except IndexError:
+                return None
+
         while True:
             req_str = input("Enter your request: ")
             req: list = req_str.split()
             if len(req) >= 2 and req[0] == "get" and req[1] == "all":
-                if len(req) >= 3 and req[2] == "unseen":
-                    self._load_attachments(unseen=True)
+                since: str = None
+                before: str = None
+                flag: str = None
+                for it in req[2:]:
+                    if flag == "since":
+                        flag = None
+                        since = transform_to_date(it)
+                    elif flag == "before":
+                        flag = None
+                        before = transform_to_date(it)
+                    if it == "since":
+                        flag = "since"
+                    elif it == "before":
+                        flag = "before"
+
+                if since is not None:
+                    if before is not None:
+                        self._load_attachments(since=since, before=before)
+                    else:
+                        self._load_attachments(since=since)
+                elif before is not None:
+                    self._load_attachments(before=before)
                 else:
                     self._load_attachments()
                 return True
@@ -119,10 +152,11 @@ class Client(object):
 
         return True
 
-    def _load_attachments(self, unseen: bool = False):
+    # TODO: add unseen functional
+    def _load_attachments(self, **kwargs):
         """
         Load attachments from mails in mailbox in directories
-        :param unseen: if True, load attachments from unseen mails,
+        :param unseen: (DO NOT USE) if True, load attachments from unseen mails,
         else load attachments from all files (which satisfy _check_dir)
         """
         stats = Stats()
@@ -132,8 +166,21 @@ class Client(object):
             assert status == "OK", f"Can't select {box}"
 
             key_word = "group"
-            if unseen:
-                status, num_messages = self._client.search("utf-8", "INBOX", "(UNSEEN)", "SUBJECT", key_word)
+            # if unseen:
+            #     status, num_messages = self._client.search("utf-8", "INBOX", "(UNSEEN)", "SUBJECT", key_word)
+            # else:
+            #     status, num_messages = self._client.search("utf-8", "SUBJECT", key_word)
+            if "since" in kwargs:
+                if "before" in kwargs:
+                    status, num_messages = self._client.search("utf-8", "SUBJECT", key_word,
+                                                               f"(SINCE {kwargs['since'].strftime('%d-%b-%Y')})",
+                                                               f"(BEFORE {kwargs['before'].strftime('%d-%b-%Y')})")
+                else:
+                    status, num_messages = self._client.search("utf-8", "SUBJECT", key_word,
+                                                               f"(SINCE {kwargs['since'].strftime('%d-%b-%Y')})")
+            elif "before" in kwargs:
+                status, num_messages = self._client.search("utf-8", "SUBJECT", key_word,
+                                                           f"(BEFORE {kwargs['before'].strftime('%d-%b-%Y')})")
             else:
                 status, num_messages = self._client.search("utf-8", "SUBJECT", key_word)
             assert status == "OK", f"Can't search {key_word}"
@@ -198,7 +245,10 @@ class Client(object):
         print(f'''****************
         You can use following methods:
         get all: get all files in mails, which consist 'group' in theme
-        get all unseen: same 'get all', but get only unseen emails
+                 you can add 'before 8:10:2017', 
+                 if you want to get files before 8 november 2017 year
+                 Similarly, you can add 'since 10:12:2008',
+                 if you want to get files since 10 december 2008 year 
         compile: compile all files in {self._compile_res}
         exit: exit client
 ****************''')
