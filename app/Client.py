@@ -105,10 +105,13 @@ class Client(object):
             req_str = input("Enter your request: ")
             req: list = req_str.split()
             if len(req) >= 2 and req[0] == "get" and req[1] == "all":
+                select = "INBOX"
                 since: str = None
                 before: str = None
                 flag: str = None
-                for it in req[2:]:
+                for num, it in enumerate(req[2:]):
+                    if it == "select" and num < len(req[2:])-1:
+                        select = req[2+num+1]
                     if flag == "since":
                         flag = None
                         since = transform_to_date(it)
@@ -122,13 +125,13 @@ class Client(object):
 
                 if since is not None:
                     if before is not None:
-                        self._load_attachments(since=since, before=before)
+                        self._load_attachments(select=select, since=since, before=before)
                     else:
-                        self._load_attachments(since=since)
+                        self._load_attachments(select=select, since=since)
                 elif before is not None:
-                    self._load_attachments(before=before)
+                    self._load_attachments(select=select, before=before)
                 else:
-                    self._load_attachments()
+                    self._load_attachments(select=select)
                 return True
             elif len(req) >= 1 and req[0] == "compile":
                 self._compile()
@@ -160,8 +163,9 @@ class Client(object):
         else load attachments from all files (which satisfy _check_dir)
         """
         stats = Stats()
+        line = "--------------------------------------------"
         try:
-            box = "INBOX"
+            box = kwargs["select"]
             status, msgs = self._client.select(box, True)
             assert status == "OK", f"Can't select {box}"
 
@@ -192,10 +196,14 @@ class Client(object):
 
                 # self._client.store(num, "+FLAGS", "\Seen")
                 mail = message_from_bytes(message[0][1])
+                print(line)
+                print(f"There is a mail from {mail['From'][mail['From'].find('<')+1:mail['From'].find('>')]} "
+                      f"with subject: {mail['Subject']}")
 
                 if mail.is_multipart():
                     dirname = '/'.join(mail["Subject"].split(' ')[1:])
                     if not self._check_dir(dirname):
+                        print("Passed: Wrong subject")
                         continue
                     dirname = f"{self._compile_res}/" + dirname
                     create_dir(dirname)
@@ -204,6 +212,7 @@ class Client(object):
                         filename = part.get_filename()
                         if filename:
                             with open(f"{dirname}/{filename}", 'wb') as new_file:
+                                print(f"Downloaded: {filename}")
                                 new_file.write(part.get_payload(decode=True))
 
                     logs = self._compiler.compile_direct(dirname)
@@ -215,9 +224,11 @@ class Client(object):
                         human = lst[3]
                         theme = lst[2]
                         stats.add(group, human, theme, log)
+            print(line)
 
             with open("log_table.txt", 'w') as log_file:
                 log_file.write(str(stats))
+
         except self._client.abort as err:
             print(err)
             return
